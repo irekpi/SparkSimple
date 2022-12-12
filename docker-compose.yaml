@@ -1,0 +1,55 @@
+version: '3.9'
+services:
+    spark-master:
+        image: docker.io/bitnami/spark:3
+        container_name: test-spark-master
+        hostname: test-spark-master
+        restart: on-failure
+        volumes:
+          - ./app:/app
+        ports:
+          - 8080:8080
+          - 7077:7077
+          - 4040:4040
+        environment:
+          - SPARK_MODE=master
+          - SPARK_MASTER_PORT=7077
+          - SPARK_MASTER_WEBUI_PORT=8080
+          - SPARK_MASTER_HOST=test-spark-master
+          - SPARK_RPC_AUTHENTICATION_ENABLED=no
+          - SPARK_RPC_ENCRYPTION_ENABLED=no
+          - SPARK_LOCAL_STORAGE_ENCRYPTION_ENABLED=no
+          - SPARK_SSL_ENABLED=no
+    spark-worker:
+        image: docker.io/bitnami/spark:3
+        container_name: test-spark-worker
+        hostname: test-spark-worker
+        depends_on:
+          - spark-master
+        restart: on-failure
+        volumes:
+          - ./app:/app
+        ports:
+          - 8081:8081
+        environment:
+          - SPARK_MODE=worker
+          - SPARK_MASTER_PORT=7077
+          - SPARK_MASTER_WEBUI_PORT=8080
+          - SPARK_MASTER_HOST=spark-master
+          - SPARK_RPC_AUTHENTICATION_ENABLED=no
+          - SPARK_RPC_ENCRYPTION_ENABLED=no
+          - SPARK_LOCAL_STORAGE_ENCRYPTION_ENABLED=no
+          - SPARK_SSL_ENABLED=no
+    spark-tester-1:
+      image: docker.io/bitnami/spark:3
+      container_name: spark-tester-1
+      command: [ "spark-submit",  "/app/test_run.py" ]
+#      command: sleep infinity
+      volumes:
+        - ./app:/app
+      depends_on:
+        - spark-master
+        - spark-worker
+      environment:
+        - PYSPARK_SUBMIT_ARGS='pyspark-shell'
+        - "SPARK_MASTER=spark://spark-master:7077"
